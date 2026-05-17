@@ -15,12 +15,13 @@ let adminState = {};
 let joriyPollId = null;
 let foydalanuvchiBallari = {}; 
 
+// Yangilangan Admin klaviaturasi
 const adminKeyboard = Markup.keyboard([
-    ['➕ Yangi Test Yaratish', '📊 Natijalarni Ko\'rish'],
-    ['🚀 Testni Guruhga va Kanalga Yuborish']
+    ['➕ Yangi Test Yaratish', '📢 Xabar Yuborish'],
+    ['📊 Natijalarni Ko\'rish', '🚀 Testni Guruh/Kanalga Yuborish'],
+    ['🔄 Natijalarni Tozalash']
 ]).resize();
 
-// Adminlikni tekshirish uchun yordamchi funksiya
 function isAdmin(userId) {
     return ADMINLAR.includes(userId);
 }
@@ -48,6 +49,12 @@ bot.hears('➕ Yangi Test Yaratish', (ctx) => {
     ctx.reply('📝 **1-Qadam:** Test savolini yuboring:', Markup.keyboard([['❌ Bekor qilish']]).resize());
 });
 
+bot.hears('📢 Xabar Yuborish', (ctx) => {
+    if (!isAdmin(ctx.from.id)) return;
+    adminState = { step: 'kutish_xabar' };
+    ctx.reply('📩 Guruh va kanalga yuboriladigan xabarni yuboring.\n\n*(Matn, rasm, video, audio yoki fayl yuborishingiz mumkin)*', Markup.keyboard([['❌ Bekor qilish']]).resize());
+});
+
 bot.hears('❌ Bekor qilish', (ctx) => {
     if (!isAdmin(ctx.from.id)) return;
     adminState = {};
@@ -72,7 +79,37 @@ bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
     ctx.reply(reyting, { parse_mode: 'Markdown' });
 });
 
-bot.hears('🚀 Testni Guruhga va Kanalga Yuborish', async (ctx) => {
+// 🔄 Natijalarni tozalash tugmasi bosilganda tasdiqlash so'rash
+bot.hears('🔄 Natijalarni Tozalash', (ctx) => {
+    if (!isAdmin(ctx.from.id)) return;
+    
+    const tasdiqlashKeyboard = Markup.inlineKeyboard([
+        [
+            Markup.button.callback('✅ Ha, o\'chirish', 'clear_yes'),
+            Markup.button.callback('❌ Yo\'q, bekor qilish', 'clear_no')
+        ]
+    ]);
+
+    ctx.reply('⚠️ **Diqqat!** Barcha foydalanuvchilarning ballari butunlay ochib ketadi. Rostdan ham natijalarni tozalamoqchimisiz?', tasdiqlashKeyboard);
+});
+
+// Tasdiqlash tugmalari bosilganda ishlaydigan qism
+bot.action('clear_yes', (ctx) => {
+    if (!isAdmin(ctx.from.id)) return ctx.answerCbQuery('Siz admin emassiz!');
+    
+    foydalanuvchiBallari = {}; // Hamma ballarni o'chirish
+    ctx.answerCbQuery('Natijalar muvaffaqiyatli tozalandi!');
+    ctx.editMessageText('🔄 **Barcha foydalanuvchilar natijalari muvaffaqiyatli nolga tushirildi (tozalandi)!**');
+});
+
+bot.action('clear_no', (ctx) => {
+    if (!isAdmin(ctx.from.id)) return ctx.answerCbQuery('Siz admin emassiz!');
+    
+    ctx.answerCbQuery('Jarayon bekor qilindi.');
+    ctx.editMessageText('❌ Natijalarni tozalash jarayoni bekor qilindi.');
+});
+
+bot.hears('🚀 Testni Guruh/Kanalga Yuborish', async (ctx) => {
     if (!isAdmin(ctx.from.id)) return;
     if (adminState.step !== 'tayyor') return ctx.reply('❌ Avval yangi test yaratishingiz kerak!');
 
@@ -106,7 +143,7 @@ bot.on('poll_answer', (ctx) => {
     if (answer.poll_id === joriyPollId && adminState.step === 'tayyor') {
         const userId = answer.user.id;
         const userName = answer.user.first_name || "Foydalanuvchi";
-        const tanlanganVariant = answer.option_ids[0]; // To'g'rilangan qism
+        const tanlanganVariant = answer.option_ids[0]; 
         
         if (tanlanganVariant === adminState.togriJavobId) {
             if (!foydalanuvchiBallari[userId]) {
@@ -117,9 +154,24 @@ bot.on('poll_answer', (ctx) => {
     }
 });
 
-bot.on('text', async (ctx) => {
+bot.on(['text', 'photo', 'video', 'document', 'audio', 'voice'], async (ctx) => {
     if (!isAdmin(ctx.from.id)) return;
+
+    if (adminState.step === 'kutish_xabar') {
+        try {
+            await ctx.telegram.copyMessage(GURUH_ID, ctx.chat.id, ctx.message.message_id);
+            await ctx.telegram.copyMessage(KANAL_ID, ctx.chat.id, ctx.message.message_id);
+
+            adminState = {};
+            return ctx.reply('🚀 Xabaringiz guruhga va kanalga muvaffaqiyatli yuborildi!', adminKeyboard);
+        } catch (error) {
+            console.error(error);
+            return ctx.reply('❌ Xabarni yuborishda xatolik yuz berdi. Bot guruhda admin ekanligini tekshiring.', adminKeyboard);
+        }
+    }
+
     const text = ctx.message.text;
+    if (!text) return;
 
     if (adminState.step === 'kutish_savol') {
         adminState.savol = text;
