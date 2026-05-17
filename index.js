@@ -1,4 +1,5 @@
 const { Telegraf, Markup } = require('telegraf');
+const express = require('express'); // 24/7 ishlashi uchun veb-server
 
 const BOT_TOKEN = '8871778059:AAH26_U6wn-9cmNnRIjiCUxHpxlp3MzRq3k';
 const ADMIN_ID = 8753197896; 
@@ -11,19 +12,16 @@ let adminState = {};
 let joriyPollId = null;
 let foydalanuvchiBallari = {}; 
 
-
 const adminKeyboard = Markup.keyboard([
     ['➕ Yangi Test Yaratish', '📊 Natijalarni Ko\'rish'],
     ['🚀 Testni Guruhga va Kanalga Yuborish']
 ]).resize();
-
 
 bot.command('start', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return ctx.reply('Salom! Men guruhlarda test o\'tkazadigan botman.');
     adminState = {}; 
     return ctx.reply('Xush kelibsiz, Admin! Quyidagi paneldan foydalaning:', adminKeyboard);
 });
-
 
 bot.command('done', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
@@ -42,13 +40,11 @@ bot.hears('➕ Yangi Test Yaratish', (ctx) => {
     ctx.reply('📝 **1-Qadam:** Test savolini yuboring:', Markup.keyboard([['❌ Bekor qilish']]).resize());
 });
 
-
 bot.hears('❌ Bekor qilish', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     adminState = {};
     ctx.reply('Jarayon bekor qilindi.', adminKeyboard);
 });
-
 
 bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
@@ -57,7 +53,6 @@ bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
     if (userlar.length === 0) {
         return ctx.reply('📊 Hozircha hech kim test yechmadi yoki ballar mavjud emas.');
     }
-
 
     userlar.sort((a, b) => b.ball - a.ball);
 
@@ -69,13 +64,11 @@ bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
     ctx.reply(reyting, { parse_mode: 'Markdown' });
 });
 
-
 bot.hears('🚀 Testni Guruhga va Kanalga Yuborish', async (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     if (adminState.step !== 'tayyor') return ctx.reply('❌ Avval yangi test yaratishingiz kerak!');
 
     try {
-
         const guruhPoll = await bot.telegram.sendQuiz(
             GURUH_ID,
             adminState.savol,
@@ -99,15 +92,14 @@ bot.hears('🚀 Testni Guruhga va Kanalga Yuborish', async (ctx) => {
     }
 });
 
-
 bot.on('poll_answer', (ctx) => {
     const answer = ctx.pollAnswer;
     
-
     if (answer.poll_id === joriyPollId && adminState.step === 'tayyor') {
         const userId = answer.user.id;
         const userName = answer.user.first_name || "Foydalanuvchi";
-        const tanlanganVariant = answer.option_ids[0]; 
+        const tanlanganVariant = answer.option_ids[0]; // Massiv ichidagi birinchi indeks olinadi
+        
         if (tanlanganVariant === adminState.togriJavobId) {
             if (!foydalanuvchiBallari[userId]) {
                 foydalanuvchiBallari[userId] = { name: userName, ball: 0 };
@@ -151,6 +143,19 @@ bot.on('text', async (ctx) => {
     }
 });
 
+// Render uchun Express server sozlamalari
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('Bot status: ONLINE (24/7)');
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
 bot.launch().then(() => console.log('Bot muvaffaqiyatli ishga tushdi!'));
+
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
