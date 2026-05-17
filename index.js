@@ -1,8 +1,11 @@
 const { Telegraf, Markup } = require('telegraf');
-const express = require('express'); // 24/7 ishlashi uchun veb-server
+const express = require('express');
 
 const BOT_TOKEN = '8871778059:AAH26_U6wn-9cmNnRIjiCUxHpxlp3MzRq3k';
-const ADMIN_ID = 8753197896; 
+
+// 👥 ADMINLAR RO'YXATI (Bu yerga yangi admin ID raqamlarini vergul bilan qo'shib ketaverasiz)
+const ADMINLAR = [8753197896, 181472401, 8231902460,5022826584]; 
+
 const GURUH_ID = -1003665140495; 
 const KANAL_ID = -1003743236897;
 
@@ -17,14 +20,19 @@ const adminKeyboard = Markup.keyboard([
     ['🚀 Testni Guruhga va Kanalga Yuborish']
 ]).resize();
 
+// Adminlikni tekshirish uchun yordamchi funksiya
+function isAdmin(userId) {
+    return ADMINLAR.includes(userId);
+}
+
 bot.command('start', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return ctx.reply('Salom! Men guruhlarda test o\'tkazadigan botman.');
+    if (!isAdmin(ctx.from.id)) return ctx.reply('Salom! Men guruhlarda test o\'tkazadigan botman.');
     adminState = {}; 
     return ctx.reply('Xush kelibsiz, Admin! Quyidagi paneldan foydalaning:', adminKeyboard);
 });
 
 bot.command('done', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     if (adminState.step !== 'kutish_variantlar') return ctx.reply('❌ Hozir variant kiritish bosqichida emassiz!');
     if (!adminState.variantlar || adminState.variantlar.length < 2) {
         return ctx.reply('❌ Kamida 2 ta variant bo\'lishi shart!');
@@ -35,19 +43,19 @@ bot.command('done', (ctx) => {
 });
 
 bot.hears('➕ Yangi Test Yaratish', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     adminState = { step: 'kutish_savol', savol: '', variantlar: [] };
     ctx.reply('📝 **1-Qadam:** Test savolini yuboring:', Markup.keyboard([['❌ Bekor qilish']]).resize());
 });
 
 bot.hears('❌ Bekor qilish', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     adminState = {};
     ctx.reply('Jarayon bekor qilindi.', adminKeyboard);
 });
 
 bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     
     const userlar = Object.values(foydalanuvchiBallari);
     if (userlar.length === 0) {
@@ -65,7 +73,7 @@ bot.hears('📊 Natijalarni Ko\'rish', (ctx) => {
 });
 
 bot.hears('🚀 Testni Guruhga va Kanalga Yuborish', async (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     if (adminState.step !== 'tayyor') return ctx.reply('❌ Avval yangi test yaratishingiz kerak!');
 
     try {
@@ -98,7 +106,7 @@ bot.on('poll_answer', (ctx) => {
     if (answer.poll_id === joriyPollId && adminState.step === 'tayyor') {
         const userId = answer.user.id;
         const userName = answer.user.first_name || "Foydalanuvchi";
-        const tanlanganVariant = answer.option_ids[0]; // Massiv ichidagi birinchi indeks olinadi
+        const tanlanganVariant = answer.option_ids[0]; // To'g'rilangan qism
         
         if (tanlanganVariant === adminState.togriJavobId) {
             if (!foydalanuvchiBallari[userId]) {
@@ -110,7 +118,7 @@ bot.on('poll_answer', (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!isAdmin(ctx.from.id)) return;
     const text = ctx.message.text;
 
     if (adminState.step === 'kutish_savol') {
@@ -143,19 +151,11 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// Render uchun Express server sozlamalari
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-    res.send('Bot status: ONLINE (24/7)');
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+app.get('/', (req, res) => res.send('Bot status: ONLINE (24/7)'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 bot.launch().then(() => console.log('Bot muvaffaqiyatli ishga tushdi!'));
-
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
