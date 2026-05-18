@@ -14,7 +14,7 @@ const bot = new Telegraf(BOT_TOKEN);
 let adminState = {}; 
 let joriyPollId = null;
 let foydalanuvchiBallari = {}; 
-
+ 
 // Yangilangan Admin klaviaturasi
 const adminKeyboard = Markup.keyboard([
     ['➕ Yangi Test Yaratish', '📢 Xabar Yuborish'],
