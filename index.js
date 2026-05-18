@@ -4,7 +4,7 @@ const express = require('express');
 const BOT_TOKEN = '8871778059:AAH26_U6wn-9cmNnRIjiCUxHpxlp3MzRq3k';
 
 // 👥 ADMINLAR RO'YXATI (Bu yerga yangi admin ID raqamlarini vergul bilan qo'shib ketaverasiz)
-const ADMINLAR = [8753197896, 181472401, 8231902460,5022826584]; 
+const ADMINLAR = [8753197896, 181472401, 8231902460,5022826584,251559407]; 
 
 const GURUH_ID = -1003665140495; 
 const KANAL_ID = -1003743236897;
